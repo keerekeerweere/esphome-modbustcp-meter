@@ -1,0 +1,299 @@
+substitutions:
+  name: esp32-s3-energy-meter
+  friendly_name: esp32-s3-energy-meter
+  energy_prefix: ""
+  fixed_mac: "CC:BA:97:1D:01:01"
+  fixed_serial: "CCBA971D0101"
+
+esphome:
+  name: ${name}
+  friendly_name: ${friendly_name}
+  platformio_options:
+    board_build.arduino.memory_type: qio_qspi
+    board_build.psram_type: qio
+    board_build.extra_flags: -DBOARD_HAS_PSRAM
+    board_upload.maximum_size: 4194304
+
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 4MB
+  framework:
+    type: arduino
+#    version: "3.1.1"
+  #partitions: "/config/esphome/4m_partitions.csv"
+
+ethernet:
+  type: W5500
+  clk_pin: 12
+  interrupt_pin: 9
+  mosi_pin: 11
+  miso_pin: 13
+  cs_pin: 10
+  clock_speed: 16Mhz
+  domain: .70.mystack.eu
+  mac_address: ${fixed_mac}
+
+api:
+  encryption: 
+    key: !secret api_encryption_key
+
+ota:
+  platform: esphome
+  password: !secret ota_password
+
+#<<: !include includes/common-wifi-web.yaml
+
+external_components:
+  - source: github://keerekeerweere/esphome-udpserver
+    components: [ udpserver ]
+
+
+# Enable logging
+logger:
+  level: INFO
+  baud_rate: 0
+#  baud_rate: 0
+#  deassert_rts_dtr: true
+  logs:
+    ethernet: INFO
+    sensor: INFO
+    dsmr: INFO
+
+uart:
+#  tx_pin: 
+#    number: 43
+#    inverted: true
+  rx_pin: 
+    number: 44
+    inverted: true
+  id: p1meter_uart
+  baud_rate: 115200
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 6000
+  
+  # Add the debug section here to log incoming P1 data
+#  debug:
+#    direction: RX
+#    dummy_receiver: true
+#    after:
+#      delimiter: "\r\n"
+#    sequence:
+#      - lambda: |-
+#          std::string incoming_data(bytes.begin(), bytes.end());
+#          ESP_LOGD("uart", "Received: %s", incoming_data.c_str());
+
+dsmr:
+  id: dsmr_meter_dev
+  uart_id: p1meter_uart
+  max_telegram_length: 4096
+  crc_check: false
+  receive_timeout: 400ms
+
+sensor:
+  - platform: dsmr
+    energy_delivered_tariff1:
+      name: ${energy_prefix} "Energy Consumed Tariff 1"
+      state_class: total_increasing
+    energy_delivered_tariff2:
+      name: ${energy_prefix} "Energy Consumed Tariff 2"
+      state_class: total_increasing
+    energy_returned_tariff1:
+      name: ${energy_prefix} "Energy Produced Tariff 1"
+    energy_returned_tariff2:
+      name: ${energy_prefix} "Energy Produced Tariff 2"
+    power_delivered:
+      name: ${energy_prefix} "Power Consumed"
+      id: esp32_s3_energy_meter_power_consumed
+      accuracy_decimals: 3
+    power_returned:
+      name: ${energy_prefix} "Power Produced"
+      id: esp32_s3_energy_meter_power_produced
+      accuracy_decimals: 3
+    electricity_failures:
+      name: ${energy_prefix} "Electricity Failures"
+      icon: mdi:alert
+    electricity_long_failures:
+      name: ${energy_prefix} "Long Electricity Failures"
+      icon: mdi:alert
+    voltage_l1:
+      name: ${energy_prefix} "Voltage Phase 1"
+      id: esp32_s3_energy_meter_voltage_phase_1
+      accuracy_decimals: 3
+    voltage_l2:
+      name: ${energy_prefix} "Voltage Phase 2"
+      id: esp32_s3_energy_meter_voltage_phase_2
+      accuracy_decimals: 3
+    voltage_l3:
+      name: ${energy_prefix} "Voltage Phase 3"
+      id: esp32_s3_energy_meter_voltage_phase_3
+      accuracy_decimals: 3
+    current_l1:
+      name: ${energy_prefix} "Current Phase 1"
+      id: esp32_s3_energy_meter_current_phase_1
+      accuracy_decimals: 3
+    current_l2:
+      name: ${energy_prefix} "Current Phase 2"
+      id: esp32_s3_energy_meter_current_phase_2
+      accuracy_decimals: 3
+    current_l3:
+      name: ${energy_prefix} "Current Phase 3"
+      id: esp32_s3_energy_meter_current_phase_3
+      accuracy_decimals: 3
+    power_delivered_l1:
+      name: ${energy_prefix} "Power Consumed Phase 1"
+      id: esp32_s3_energy_meter_power_consumed_phase_1
+      accuracy_decimals: 3
+    power_delivered_l2:
+      name: ${energy_prefix} "Power Consumed Phase 2"
+      id: esp32_s3_energy_meter_power_consumed_phase_2
+      accuracy_decimals: 3
+    power_delivered_l3:
+      name: ${energy_prefix} "Power Consumed Phase 3"
+      id: esp32_s3_energy_meter_power_consumed_phase_3
+      accuracy_decimals: 3
+    power_returned_l1:
+      name: ${energy_prefix} "Power Produced Phase 1"
+      id: esp32_s3_energy_meter_power_produced_phase_1
+      accuracy_decimals: 3
+    power_returned_l2:
+      name: ${energy_prefix} "Power Produced Phase 2"
+      id: esp32_s3_energy_meter_power_produced_phase_2
+      accuracy_decimals: 3
+    power_returned_l3:
+      name: ${energy_prefix} "Power Produced Phase 3"
+      id: esp32_s3_energy_meter_power_produced_phase_3
+      accuracy_decimals: 3
+    gas_delivered_be:
+      name: ${energy_prefix} "Gas Consumed Belgium"
+      accuracy_decimals: 3
+    water_delivered:
+      name: ${energy_prefix} "Water Consumed"
+      accuracy_decimals: 3
+    active_energy_import_current_average_demand:
+      name: ${energy_prefix} "Peak Tarrif Quarterly Demand"
+      accuracy_decimals: 3
+    active_energy_import_maximum_demand_running_month:
+      name: ${energy_prefix} "Peak Tarrif Monthly Demand"
+      accuracy_decimals: 3
+    active_energy_import_maximum_demand_last_13_months:
+      name: ${energy_prefix} "Peak Tarrif 13Months Demand"
+      accuracy_decimals: 3
+  - platform: uptime
+    name: ${energy_prefix} "DSMR reader Uptime"
+         
+text_sensor:
+  - platform: dsmr
+    identification:
+      name: "DSMR Identification"
+    p1_version:
+      name: "DSMR Version"
+    p1_version_be:
+      name: "DSMR Version Belgium"
+  - platform: version
+    name: ${energy_prefix} "ESPHome Version"
+    hide_timestamp: true
+
+button:
+  - platform: restart
+    id: restart_button
+    name: '${friendly_name} restart'
+
+
+udpserver:
+  id: fake_shelly_em
+  listen_port: 1010
+#  allowed_ips:
+#    - 10.10.4.12
+  on_string_data:
+    - text_filter: "\"method\":\"EM.GetStatus\""
+      filter_mode: CONTAINS
+      then:
+        - lambda: |-
+            char buf[512];
+            float l1_in = id(esp32_s3_energy_meter_power_consumed_phase_1).state * 1000; // Convert kW to W
+            float l1_out = id(esp32_s3_energy_meter_power_produced_phase_1).state * 1000; // Convert kW to W
+            float l2_in = id(esp32_s3_energy_meter_power_consumed_phase_2).state * 1000; // Convert kW to W
+            float l2_out = id(esp32_s3_energy_meter_power_produced_phase_2).state * 1000; // Convert kW to W
+            float l3_in = id(esp32_s3_energy_meter_power_consumed_phase_3).state * 1000; // Convert kW to W
+            float l3_out = id(esp32_s3_energy_meter_power_produced_phase_3).state * 1000; // Convert kW to W
+
+            float l1 = l1_in - l1_out; // Net power
+            float l2 = l2_in - l2_out; // Net power
+            float l3 = l3_in - l3_out; // Net power
+            float total = l1 + l2 + l3; // Total power
+
+            int len = snprintf(buf, sizeof(buf),
+              "{"
+                "\"id\":0,"
+                "\"src\":\"shellypro3em-ccba971d291b\","
+                "\"dst\":\"unknown\","
+                "\"result\":{"
+                  "\"a_act_power\":%.1f,"
+                  "\"b_act_power\":%.1f,"
+                  "\"c_act_power\":%.1f,"
+                  "\"total_act_power\":%.3f"
+                "}"
+              "}",
+            l1,
+            l2,
+            l3,
+            total
+            ); // Format the JSON response
+            
+            // Send a response back to the sender
+            udp.send_response(buf);
+
+
+#captive_portal:
+light:
+  - platform: fastled_clockless
+    chipset: WS2812
+    pin: 48
+    num_leds: 1
+    rgb_order: GRB
+    name: "statuslight"
+    id: "statuslight"
+    default_transition_length: 0s
+    restore_mode: ALWAYS_ON
+    on_turn_on:
+      then:
+        - light.control:
+            id: statuslight
+            effect: "Asymmetric Slow Strobe"    
+    effects:
+      - strobe:
+          name: "Asymmetric Slow Strobe"
+          colors:
+            - state: true
+              brightness: 25%
+              red: 0%
+              green: 100%
+              blue: 0%
+              duration: 1600ms
+            - state: false
+              duration: 200ms      
+      - pulse:
+          name: "Fast Pulse"
+          transition_length: 0.5s
+          update_interval: 0.5s
+          min_brightness: 0%
+          max_brightness: 50%
+      - pulse:
+          name: "Slow Pulse"
+          transition_length: 500ms
+          update_interval: 2s
+          min_brightness: 0%
+          max_brightness: 50%
+      - pulse:
+          name: "Asymmetrical Pulse"
+          transition_length:
+            on_length: 1s
+            off_length: 500ms
+          update_interval: 1.5s      
+          min_brightness: 0%
+          max_brightness: 50%
+
