@@ -2,8 +2,8 @@ substitutions:
   name: esp32-s3-energy-meter
   friendly_name: esp32-s3-energy-meter
   energy_prefix: ""
-  fixed_mac: "CC:BA:97:1D:01:01"
-  fixed_serial: "CCBA971D0101"
+  fixed_mac: "CC:BA:97:01:01:01"
+  fixed_serial: "CCBA97010101"
 
 esphome:
   name: ${name}
@@ -32,7 +32,7 @@ ethernet:
   miso_pin: 13
   cs_pin: 10
   clock_speed: 16Mhz
-  domain: .70.mystack.eu
+  domain: .local.lan
   mac_address: ${fixed_mac}
 
 api:
@@ -43,12 +43,12 @@ ota:
   platform: esphome
   password: !secret ota_password
 
-#<<: !include includes/common-wifi-web.yaml
-
 external_components:
   - source: github://keerekeerweere/esphome-udpserver
     components: [ udpserver ]
 
+  - source: github://keerekeerweere/modbustcpmeter
+    components: [ modbustcpmeter ]
 
 # Enable logging
 logger:
@@ -75,16 +75,6 @@ uart:
   stop_bits: 1
   rx_buffer_size: 6000
   
-  # Add the debug section here to log incoming P1 data
-#  debug:
-#    direction: RX
-#    dummy_receiver: true
-#    after:
-#      delimiter: "\r\n"
-#    sequence:
-#      - lambda: |-
-#          std::string incoming_data(bytes.begin(), bytes.end());
-#          ESP_LOGD("uart", "Received: %s", incoming_data.c_str());
 
 dsmr:
   id: dsmr_meter_dev

@@ -67,14 +67,14 @@ def to_code(config):
             return (yield cg.get_variable(config[key]))
         return cg.nullptr
 
-    u1_v = yield from _sensor_or_null(CONF_VOLTAGE_SENSOR)
-    u2_v = yield from _sensor_or_null(CONF_VOLTAGE_L2_SENSOR)
-    u3_v = yield from _sensor_or_null(CONF_VOLTAGE_L3_SENSOR)
-    i1_a = yield from _sensor_or_null(CONF_CURRENT_SENSOR)
-    i2_a = yield from _sensor_or_null(CONF_CURRENT_L2_SENSOR)
-    i3_a = yield from _sensor_or_null(CONF_CURRENT_L3_SENSOR)
-    p_del = yield from _sensor_or_null(CONF_POWER_DELIVERED_SENSOR)
-    p_ret = yield from _sensor_or_null(CONF_POWER_RETURNED_SENSOR)
+    u_l1_v = yield from _sensor_or_null(CONF_VOLTAGE_SENSOR)
+    u_l2_v = yield from _sensor_or_null(CONF_VOLTAGE_L2_SENSOR)
+    u_l3_v = yield from _sensor_or_null(CONF_VOLTAGE_L3_SENSOR)
+    i_l1_a = yield from _sensor_or_null(CONF_CURRENT_SENSOR)
+    i_l2_a = yield from _sensor_or_null(CONF_CURRENT_L2_SENSOR)
+    i_l3_a = yield from _sensor_or_null(CONF_CURRENT_L3_SENSOR)
+    p_total_del = yield from _sensor_or_null(CONF_POWER_DELIVERED_SENSOR)
+    p_total_ret = yield from _sensor_or_null(CONF_POWER_RETURNED_SENSOR)
     p_del_l1 = yield from _sensor_or_null(CONF_POWER_DELIVERED_L1_SENSOR)
     p_ret_l1 = yield from _sensor_or_null(CONF_POWER_RETURNED_L1_SENSOR)
     p_del_l2 = yield from _sensor_or_null(CONF_POWER_DELIVERED_L2_SENSOR)
@@ -88,14 +88,14 @@ def to_code(config):
 
     var = cg.new_Pvariable(
         config[CONF_ID],
-        u1_v,
-        i1_a,
-        u2_v,
-        i2_a,
-        u3_v,
-        i3_a,
-        p_del,
-        p_ret,
+        u_l1_v,
+        i_l1_a,
+        u_l2_v,
+        i_l2_a,
+        u_l3_v,
+        i_l3_a,
+        p_total_del,
+        p_total_ret,
         p_del_l1,
         p_ret_l1,
         p_del_l2,
