@@ -1,55 +1,42 @@
-#pragma once
-#include "esphome.h"
+#include "modbustcpmeter.h"
 
-#include <map>
-#include <vector>
 #include <cmath>
 #include <cstring>
 
 #include "lwip/sockets.h"
 #include "lwip/inet.h"
 
-using esphome::sensor::Sensor;
+Em24ModbusTcpServer::Em24ModbusTcpServer(
+    Sensor *u1_v,
+    Sensor *i1_a,
+    Sensor *p_delivered_kw,
+    Sensor *p_returned_kw,
+    Sensor *e_del_t1_kwh,
+    Sensor *e_del_t2_kwh,
+    Sensor *e_ret_t1_kwh,
+    Sensor *e_ret_t2_kwh)
+    : u1_v_(u1_v),
+      i1_a_(i1_a),
+      p_del_kw_(p_delivered_kw),
+      p_ret_kw_(p_returned_kw),
+      e_del_t1_kwh_(e_del_t1_kwh),
+      e_del_t2_kwh_(e_del_t2_kwh),
+      e_ret_t1_kwh_(e_ret_t1_kwh),
+      e_ret_t2_kwh_(e_ret_t2_kwh) {}
 
-class Em24ModbusTcpServer : public esphome::Component {
- public:
-  Em24ModbusTcpServer(
-      Sensor *u1_v,
-      Sensor *i1_a,
-      Sensor *p_delivered_kw,
-      Sensor *p_returned_kw,
-      Sensor *e_del_t1_kwh,
-      Sensor *e_del_t2_kwh,
-      Sensor *e_ret_t1_kwh,
-      Sensor *e_ret_t2_kwh)
-      : u1_v_(u1_v),
-        i1_a_(i1_a),
-        p_del_kw_(p_delivered_kw),
-        p_ret_kw_(p_returned_kw),
-        e_del_t1_kwh_(e_del_t1_kwh),
-        e_del_t2_kwh_(e_del_t2_kwh),
-        e_ret_t1_kwh_(e_ret_t1_kwh),
-        e_ret_t2_kwh_(e_ret_t2_kwh) {}
-
-  void setup() override {
+void Em24ModbusTcpServer::setup() {
     // Static EM24 identity/config registers (same as your C)
     set_u16_(0x000b, 1650);  // model: EM24DINAV23XE1PFB (your value)
     set_u16_(0xa000, 7);     // application set to H
     set_u16_(0x0302, 0);     // hardware version
     set_u16_(0x0304, 0);     // firmware version
-    set_u16_(0x1002, 3);     // phase config: 1P (your simulator uses 3 for 1P)
+    // EM24 register convention from your C: 1P -> 3, 3P -> 0
+    set_u16_(0x1002, (phase_config_ == 1) ? 3 : 0);
     set_u16_(0x0032, 0);     // phase sequence L1-L2-L3
     set_u16_(0xa100, 0);     // switch position: unlocked kVARh
     set_u16_(0x0033, 50 * 10); // frequency scaled *10
 
-    // Serial number regs (same as your C: "00..."):
-    set_u16_(0x5000, ('0' << 8) | '0');
-    set_u16_(0x5001, ('0' << 8) | '0');
-    set_u16_(0x5002, ('0' << 8) | '0');
-    set_u16_(0x5003, ('0' << 8) | '0');
-    set_u16_(0x5004, ('0' << 8) | '0');
-    set_u16_(0x5005, ('0' << 8) | '0');
-    set_u16_(0x5006, ('0' << 8));  // trailing
+    set_serial_regs_();
 
     // Initialize dynamic registers to 0 (same addresses as your C)
     set_i32_rev_(0x0000, 0); // u1
@@ -77,7 +64,7 @@ class Em24ModbusTcpServer : public esphome::Component {
                             8192, this, 1, nullptr, 0);
   }
 
-  void loop() override {
+void Em24ModbusTcpServer::loop() {
     // Update dynamic registers periodically from DSMR
     const uint32_t now = millis();
     if (now - last_update_ms_ < 1000)
@@ -121,42 +108,37 @@ class Em24ModbusTcpServer : public esphome::Component {
     // Optional: you could also map phase 2/3 as 0 (already initialized)
   }
 
- private:
-  // --- Register storage (sparse) ---
-  std::map<uint16_t, uint16_t> holding_;
+void Em24ModbusTcpServer::set_u16_(uint16_t reg, uint16_t value) {
+  holding_[reg] = value;
+}
 
-  void set_u16_(uint16_t reg, uint16_t value) { holding_[reg] = value; }
+void Em24ModbusTcpServer::set_i32_rev_(uint16_t reg, int32_t v) {
+  uint32_t uv = (uint32_t) v;
+  holding_[reg]     = (uint16_t)(uv & 0xFFFF);
+  holding_[reg + 1] = (uint16_t)((uv >> 16) & 0xFFFF);
+}
 
-  // Same as your MODBUS_SET_INT32_TO_INT16_REV:
-  // tab[index] = value (low 16), tab[index+1] = value >> 16 (high 16)
-  void set_i32_rev_(uint16_t reg, int32_t v) {
-    uint32_t uv = (uint32_t) v;
-    holding_[reg]     = (uint16_t)(uv & 0xFFFF);
-    holding_[reg + 1] = (uint16_t)((uv >> 16) & 0xFFFF);
-  }
+uint16_t Em24ModbusTcpServer::get_u16_(uint16_t reg) const {
+  auto it = holding_.find(reg);
+  if (it == holding_.end())
+    return 0;
+  return it->second;
+}
 
-  uint16_t get_u16_(uint16_t reg) const {
-    auto it = holding_.find(reg);
-    if (it == holding_.end())
-      return 0;
-    return it->second;
-  }
+float Em24ModbusTcpServer::read_sensor_or_(Sensor *s, float fallback) {
+  if (s == nullptr)
+    return fallback;
+  float v = s->state;
+  if (!std::isfinite(v))
+    return fallback;
+  return v;
+}
 
-  static float read_sensor_or_(Sensor *s, float fallback) {
-    if (s == nullptr)
-      return fallback;
-    float v = s->state;
-    if (!std::isfinite(v))
-      return fallback;
-    return v;
-  }
+void Em24ModbusTcpServer::task_trampoline_(void *arg) {
+  reinterpret_cast<Em24ModbusTcpServer *>(arg)->server_task_();
+}
 
-  // --- Modbus TCP server (single task) ---
-  static void task_trampoline_(void *arg) {
-    reinterpret_cast<Em24ModbusTcpServer *>(arg)->server_task_();
-  }
-
-  void server_task_() {
+void Em24ModbusTcpServer::server_task_() {
     int listen_fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (listen_fd < 0) {
       ESP_LOGE("em24_mb", "socket() failed");
@@ -169,7 +151,7 @@ class Em24ModbusTcpServer : public esphome::Component {
 
     sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(502);
+    addr.sin_port = htons(port_);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     if (bind(listen_fd, (sockaddr *) &addr, sizeof(addr)) < 0) {
@@ -186,7 +168,7 @@ class Em24ModbusTcpServer : public esphome::Component {
       return;
     }
 
-    ESP_LOGI("em24_mb", "Modbus-TCP slave listening on port 502");
+    ESP_LOGI("em24_mb", "Modbus-TCP slave listening on port %u", port_);
 
     while (true) {
       sockaddr_in client{};
@@ -203,7 +185,7 @@ class Em24ModbusTcpServer : public esphome::Component {
 
   // Minimal Modbus TCP framing:
   // MBAP: TID(2) PID(2) LEN(2) UID(1) then PDU
-  void handle_client_(int fd) {
+void Em24ModbusTcpServer::handle_client_(int fd) {
     uint8_t buf[260];
 
     while (true) {
@@ -215,6 +197,9 @@ class Em24ModbusTcpServer : public esphome::Component {
       uint16_t pid = (buf[2] << 8) | buf[3];
       uint16_t len = (buf[4] << 8) | buf[5];
       uint8_t uid = buf[6];
+      if (unit_id_ != 0 && uid != unit_id_) {
+        continue;
+      }
 
       if (pid != 0 || len < 2 || len > 253) {
         return;
@@ -229,9 +214,9 @@ class Em24ModbusTcpServer : public esphome::Component {
 
       if (fc == 0x03 || fc == 0x04) {
         if (pdu_len < 5) {
-          send_exception_(fd, tid, uid, fc, 0x03); // illegal data value
-          continue;
-        }
+        send_exception_(fd, tid, uid, fc, 0x03);
+        continue;
+      }
 
         uint16_t start = (buf[8] << 8) | buf[9];
         uint16_t count = (buf[10] << 8) | buf[11];
@@ -265,12 +250,13 @@ class Em24ModbusTcpServer : public esphome::Component {
         send_all_(fd, out.data(), out.size());
       } else {
         // Unsupported function
-        send_exception_(fd, tid, uid, fc, 0x01); // illegal function
+        send_exception_(fd, tid, uid, fc, 0x01);
       }
     }
   }
 
-  void send_exception_(int fd, uint16_t tid, uint8_t uid, uint8_t fc, uint8_t ex) {
+void Em24ModbusTcpServer::send_exception_(int fd, uint16_t tid, uint8_t uid,
+                                          uint8_t fc, uint8_t ex) {
     uint8_t out[9];
     out[0] = (tid >> 8) & 0xFF; out[1] = tid & 0xFF;
     out[2] = 0; out[3] = 0;
@@ -281,25 +267,33 @@ class Em24ModbusTcpServer : public esphome::Component {
     send_all_(fd, out, sizeof(out));
   }
 
-  static bool send_all_(int fd, const uint8_t *data, size_t len) {
-    size_t off = 0;
-    while (off < len) {
-      int w = send(fd, data + off, len - off, 0);
-      if (w <= 0)
-        return false;
-      off += (size_t)w;
-    }
-    return true;
+bool Em24ModbusTcpServer::send_all_(int fd, const uint8_t *data, size_t len) {
+  size_t off = 0;
+  while (off < len) {
+    int w = send(fd, data + off, len - off, 0);
+    if (w <= 0)
+      return false;
+    off += (size_t)w;
+  }
+  return true;
+}
+
+void Em24ModbusTcpServer::set_serial_regs_() {
+  std::string s = serial_;
+  if (s.size() < 14) {
+    s.append(14 - s.size(), '0');
+  } else if (s.size() > 14) {
+    s.resize(14);
   }
 
-  uint32_t last_update_ms_{0};
+  for (int i = 0; i < 6; i++) {
+    uint16_t reg = 0x5000 + i;
+    uint8_t hi = static_cast<uint8_t>(s[i * 2]);
+    uint8_t lo = static_cast<uint8_t>(s[i * 2 + 1]);
+    set_u16_(reg, (hi << 8) | lo);
+  }
 
-  Sensor *u1_v_{nullptr};
-  Sensor *i1_a_{nullptr};
-  Sensor *p_del_kw_{nullptr};
-  Sensor *p_ret_kw_{nullptr};
-  Sensor *e_del_t1_kwh_{nullptr};
-  Sensor *e_del_t2_kwh_{nullptr};
-  Sensor *e_ret_t1_kwh_{nullptr};
-  Sensor *e_ret_t2_kwh_{nullptr};
-};
+  // Last register: only high byte used, low byte zero.
+  uint8_t last = static_cast<uint8_t>(s[12]);
+  set_u16_(0x5006, (last << 8));
+}

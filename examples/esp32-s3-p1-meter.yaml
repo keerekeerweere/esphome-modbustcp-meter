@@ -97,14 +97,18 @@ sensor:
   - platform: dsmr
     energy_delivered_tariff1:
       name: ${energy_prefix} "Energy Consumed Tariff 1"
+      id: esp32_s3_energy_meter_energy_delivered_t1
       state_class: total_increasing
     energy_delivered_tariff2:
       name: ${energy_prefix} "Energy Consumed Tariff 2"
+      id: esp32_s3_energy_meter_energy_delivered_t2
       state_class: total_increasing
     energy_returned_tariff1:
       name: ${energy_prefix} "Energy Produced Tariff 1"
+      id: esp32_s3_energy_meter_energy_returned_t1
     energy_returned_tariff2:
       name: ${energy_prefix} "Energy Produced Tariff 2"
+      id: esp32_s3_energy_meter_energy_returned_t2
     power_delivered:
       name: ${energy_prefix} "Power Consumed"
       id: esp32_s3_energy_meter_power_consumed
@@ -184,6 +188,21 @@ sensor:
       accuracy_decimals: 3
   - platform: uptime
     name: ${energy_prefix} "DSMR reader Uptime"
+
+modbustcpmeter:
+  id: em24_modbus_tcp
+  port: 502
+  unit_id: 1
+  phase_config: 1
+  serial: ${fixed_serial}
+  voltage_sensor: esp32_s3_energy_meter_voltage_phase_1
+  current_sensor: esp32_s3_energy_meter_current_phase_1
+  power_delivered_sensor: esp32_s3_energy_meter_power_consumed
+  power_returned_sensor: esp32_s3_energy_meter_power_produced
+  energy_delivered_t1_sensor: esp32_s3_energy_meter_energy_delivered_t1
+  energy_delivered_t2_sensor: esp32_s3_energy_meter_energy_delivered_t2
+  energy_returned_t1_sensor: esp32_s3_energy_meter_energy_returned_t1
+  energy_returned_t2_sensor: esp32_s3_energy_meter_energy_returned_t2
          
 text_sensor:
   - platform: dsmr
@@ -296,4 +315,3 @@ light:
           update_interval: 1.5s      
           min_brightness: 0%
           max_brightness: 50%
-
