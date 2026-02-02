@@ -9,16 +9,36 @@
 Em24ModbusTcpServer::Em24ModbusTcpServer(
     Sensor *u1_v,
     Sensor *i1_a,
+    Sensor *u2_v,
+    Sensor *i2_a,
+    Sensor *u3_v,
+    Sensor *i3_a,
     Sensor *p_delivered_kw,
     Sensor *p_returned_kw,
+    Sensor *p_del_l1_kw,
+    Sensor *p_ret_l1_kw,
+    Sensor *p_del_l2_kw,
+    Sensor *p_ret_l2_kw,
+    Sensor *p_del_l3_kw,
+    Sensor *p_ret_l3_kw,
     Sensor *e_del_t1_kwh,
     Sensor *e_del_t2_kwh,
     Sensor *e_ret_t1_kwh,
     Sensor *e_ret_t2_kwh)
     : u1_v_(u1_v),
       i1_a_(i1_a),
+      u2_v_(u2_v),
+      i2_a_(i2_a),
+      u3_v_(u3_v),
+      i3_a_(i3_a),
       p_del_kw_(p_delivered_kw),
       p_ret_kw_(p_returned_kw),
+      p_del_l1_kw_(p_del_l1_kw),
+      p_ret_l1_kw_(p_ret_l1_kw),
+      p_del_l2_kw_(p_del_l2_kw),
+      p_ret_l2_kw_(p_ret_l2_kw),
+      p_del_l3_kw_(p_del_l3_kw),
+      p_ret_l3_kw_(p_ret_l3_kw),
       e_del_t1_kwh_(e_del_t1_kwh),
       e_del_t2_kwh_(e_del_t2_kwh),
       e_ret_t1_kwh_(e_ret_t1_kwh),
@@ -72,20 +92,44 @@ void Em24ModbusTcpServer::loop() {
     last_update_ms_ = now;
 
     // Voltage
-    float u1 = read_sensor_or_(u1_v_, 230.0f); // fallback 230V if DSMR voltage not available
+    float u1 = read_sensor_or_(u1_v_, 230.0f);
+    float u2 = read_sensor_or_(u2_v_, 230.0f);
+    float u3 = read_sensor_or_(u3_v_, 230.0f);
 
-    // Power: DSMR sensors are typically kW; emulate 1-0:16.7.0 style (net power)
-    // Your C used p1 and p_total = p1 (single phase).
+    // Power: DSMR sensors are typically kW; net = delivered - returned
     float p_del_kw = read_sensor_or_(p_del_kw_, 0.0f);
     float p_ret_kw = read_sensor_or_(p_ret_kw_, 0.0f);
-    float p_net_kw = p_del_kw - p_ret_kw;     // positive: consumption, negative: injection
+    float p_net_kw = p_del_kw - p_ret_kw;
+
+    float p1_del = read_sensor_or_(p_del_l1_kw_, NAN);
+    float p1_ret = read_sensor_or_(p_ret_l1_kw_, NAN);
+    float p2_del = read_sensor_or_(p_del_l2_kw_, NAN);
+    float p2_ret = read_sensor_or_(p_ret_l2_kw_, NAN);
+    float p3_del = read_sensor_or_(p_del_l3_kw_, NAN);
+    float p3_ret = read_sensor_or_(p_ret_l3_kw_, NAN);
+    float p1_kw = (std::isfinite(p1_del) && std::isfinite(p1_ret)) ? (p1_del - p1_ret) : NAN;
+    float p2_kw = (std::isfinite(p2_del) && std::isfinite(p2_ret)) ? (p2_del - p2_ret) : NAN;
+    float p3_kw = (std::isfinite(p3_del) && std::isfinite(p3_ret)) ? (p3_del - p3_ret) : NAN;
+
+    // Total net uses dedicated DSMR total sensors.
+
+    float p1_w = std::isfinite(p1_kw) ? (p1_kw * 1000.0f) : 0.0f;
+    float p2_w = std::isfinite(p2_kw) ? (p2_kw * 1000.0f) : 0.0f;
+    float p3_w = std::isfinite(p3_kw) ? (p3_kw * 1000.0f) : 0.0f;
     float p_net_w = p_net_kw * 1000.0f;
 
     // Current
     float i1 = read_sensor_or_(i1_a_, NAN);
     if (!std::isfinite(i1) || i1 < 0.0f) {
-      // Derive from net power if current not available
-      i1 = (u1 > 1.0f) ? (p_net_w / u1) : 0.0f;
+      i1 = (u1 > 1.0f) ? (p1_w / u1) : 0.0f;
+    }
+    float i2 = read_sensor_or_(i2_a_, NAN);
+    if (!std::isfinite(i2) || i2 < 0.0f) {
+      i2 = (u2 > 1.0f) ? (p2_w / u2) : 0.0f;
+    }
+    float i3 = read_sensor_or_(i3_a_, NAN);
+    if (!std::isfinite(i3) || i3 < 0.0f) {
+      i3 = (u3 > 1.0f) ? (p3_w / u3) : 0.0f;
     }
 
     // Energy totals (kWh) -> EM24-like scaling
@@ -96,8 +140,16 @@ void Em24ModbusTcpServer::loop() {
 
     // Write registers exactly like your C’s addresses/scaling conventions for voltage/current/power
     set_i32_rev_(0x0000, (int32_t) lroundf(u1 * 10.0f));        // u1 *10
+    set_i32_rev_(0x0002, (int32_t) lroundf(u2 * 10.0f));        // u2 *10
+    set_i32_rev_(0x0004, (int32_t) lroundf(u3 * 10.0f));        // u3 *10
+
     set_i32_rev_(0x000c, (int32_t) lroundf(i1 * 1000.0f));      // i1 *1000
-    set_i32_rev_(0x0012, (int32_t) lroundf(p_net_w * 10.0f));   // p1 *10
+    set_i32_rev_(0x000e, (int32_t) lroundf(i2 * 1000.0f));      // i2 *1000
+    set_i32_rev_(0x0010, (int32_t) lroundf(i3 * 1000.0f));      // i3 *1000
+
+    set_i32_rev_(0x0012, (int32_t) lroundf(p1_w * 10.0f));      // p1 *10
+    set_i32_rev_(0x0014, (int32_t) lroundf(p2_w * 10.0f));      // p2 *10
+    set_i32_rev_(0x0016, (int32_t) lroundf(p3_w * 10.0f));      // p3 *10
     set_i32_rev_(0x0028, (int32_t) lroundf(p_net_w * 10.0f));   // p total *10
 
     // Energy

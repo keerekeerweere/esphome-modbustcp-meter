@@ -13,8 +13,18 @@ class Em24ModbusTcpServer : public esphome::Component {
   Em24ModbusTcpServer(
       Sensor *u1_v,
       Sensor *i1_a,
+      Sensor *u2_v,
+      Sensor *i2_a,
+      Sensor *u3_v,
+      Sensor *i3_a,
       Sensor *p_delivered_kw,
       Sensor *p_returned_kw,
+      Sensor *p_del_l1_kw,
+      Sensor *p_ret_l1_kw,
+      Sensor *p_del_l2_kw,
+      Sensor *p_ret_l2_kw,
+      Sensor *p_del_l3_kw,
+      Sensor *p_ret_l3_kw,
       Sensor *e_del_t1_kwh,
       Sensor *e_del_t2_kwh,
       Sensor *e_ret_t1_kwh,
@@ -54,8 +64,18 @@ class Em24ModbusTcpServer : public esphome::Component {
 
   Sensor *u1_v_{nullptr};
   Sensor *i1_a_{nullptr};
+  Sensor *u2_v_{nullptr};
+  Sensor *i2_a_{nullptr};
+  Sensor *u3_v_{nullptr};
+  Sensor *i3_a_{nullptr};
   Sensor *p_del_kw_{nullptr};
   Sensor *p_ret_kw_{nullptr};
+  Sensor *p_del_l1_kw_{nullptr};
+  Sensor *p_ret_l1_kw_{nullptr};
+  Sensor *p_del_l2_kw_{nullptr};
+  Sensor *p_ret_l2_kw_{nullptr};
+  Sensor *p_del_l3_kw_{nullptr};
+  Sensor *p_ret_l3_kw_{nullptr};
   Sensor *e_del_t1_kwh_{nullptr};
   Sensor *e_del_t2_kwh_{nullptr};
   Sensor *e_ret_t1_kwh_{nullptr};

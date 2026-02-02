@@ -193,12 +193,22 @@ modbustcpmeter:
   id: em24_modbus_tcp
   port: 502
   unit_id: 1
-  phase_config: 1
+  phase_config: 3
   serial: ${fixed_serial}
   voltage_sensor: esp32_s3_energy_meter_voltage_phase_1
+  voltage_l2_sensor: esp32_s3_energy_meter_voltage_phase_2
+  voltage_l3_sensor: esp32_s3_energy_meter_voltage_phase_3
   current_sensor: esp32_s3_energy_meter_current_phase_1
+  current_l2_sensor: esp32_s3_energy_meter_current_phase_2
+  current_l3_sensor: esp32_s3_energy_meter_current_phase_3
   power_delivered_sensor: esp32_s3_energy_meter_power_consumed
   power_returned_sensor: esp32_s3_energy_meter_power_produced
+  power_delivered_l1_sensor: esp32_s3_energy_meter_power_consumed_phase_1
+  power_returned_l1_sensor: esp32_s3_energy_meter_power_produced_phase_1
+  power_delivered_l2_sensor: esp32_s3_energy_meter_power_consumed_phase_2
+  power_returned_l2_sensor: esp32_s3_energy_meter_power_produced_phase_2
+  power_delivered_l3_sensor: esp32_s3_energy_meter_power_consumed_phase_3
+  power_returned_l3_sensor: esp32_s3_energy_meter_power_produced_phase_3
   energy_delivered_t1_sensor: esp32_s3_energy_meter_energy_delivered_t1
   energy_delivered_t2_sensor: esp32_s3_energy_meter_energy_delivered_t2
   energy_returned_t1_sensor: esp32_s3_energy_meter_energy_returned_t1

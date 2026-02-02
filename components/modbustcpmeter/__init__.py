@@ -15,10 +15,20 @@ CONF_VOLTAGE_SENSOR = "voltage_sensor"
 CONF_CURRENT_SENSOR = "current_sensor"
 CONF_POWER_DELIVERED_SENSOR = "power_delivered_sensor"
 CONF_POWER_RETURNED_SENSOR = "power_returned_sensor"
+CONF_POWER_DELIVERED_L1_SENSOR = "power_delivered_l1_sensor"
+CONF_POWER_RETURNED_L1_SENSOR = "power_returned_l1_sensor"
+CONF_POWER_DELIVERED_L2_SENSOR = "power_delivered_l2_sensor"
+CONF_POWER_RETURNED_L2_SENSOR = "power_returned_l2_sensor"
+CONF_POWER_DELIVERED_L3_SENSOR = "power_delivered_l3_sensor"
+CONF_POWER_RETURNED_L3_SENSOR = "power_returned_l3_sensor"
 CONF_ENERGY_DELIVERED_T1_SENSOR = "energy_delivered_t1_sensor"
 CONF_ENERGY_DELIVERED_T2_SENSOR = "energy_delivered_t2_sensor"
 CONF_ENERGY_RETURNED_T1_SENSOR = "energy_returned_t1_sensor"
 CONF_ENERGY_RETURNED_T2_SENSOR = "energy_returned_t2_sensor"
+CONF_VOLTAGE_L2_SENSOR = "voltage_l2_sensor"
+CONF_VOLTAGE_L3_SENSOR = "voltage_l3_sensor"
+CONF_CURRENT_L2_SENSOR = "current_l2_sensor"
+CONF_CURRENT_L3_SENSOR = "current_l3_sensor"
 
 CONFIG_SCHEMA = cv.Schema(
     {
@@ -28,9 +38,19 @@ CONFIG_SCHEMA = cv.Schema(
         cv.Optional(CONF_PHASE_CONFIG, default=1): cv.one_of(1, 3, int=True),
         cv.Optional(CONF_SERIAL, default="00000000000000"): cv.string_strict,
         cv.Optional(CONF_VOLTAGE_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_VOLTAGE_L2_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_VOLTAGE_L3_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_CURRENT_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_CURRENT_L2_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_CURRENT_L3_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_POWER_DELIVERED_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_POWER_RETURNED_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_DELIVERED_L1_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_RETURNED_L1_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_DELIVERED_L2_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_RETURNED_L2_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_DELIVERED_L3_SENSOR): cv.use_id(sensor.Sensor),
+        cv.Optional(CONF_POWER_RETURNED_L3_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_ENERGY_DELIVERED_T1_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_ENERGY_DELIVERED_T2_SENSOR): cv.use_id(sensor.Sensor),
         cv.Optional(CONF_ENERGY_RETURNED_T1_SENSOR): cv.use_id(sensor.Sensor),
@@ -48,9 +68,19 @@ def to_code(config):
         return cg.nullptr
 
     u1_v = yield from _sensor_or_null(CONF_VOLTAGE_SENSOR)
+    u2_v = yield from _sensor_or_null(CONF_VOLTAGE_L2_SENSOR)
+    u3_v = yield from _sensor_or_null(CONF_VOLTAGE_L3_SENSOR)
     i1_a = yield from _sensor_or_null(CONF_CURRENT_SENSOR)
+    i2_a = yield from _sensor_or_null(CONF_CURRENT_L2_SENSOR)
+    i3_a = yield from _sensor_or_null(CONF_CURRENT_L3_SENSOR)
     p_del = yield from _sensor_or_null(CONF_POWER_DELIVERED_SENSOR)
     p_ret = yield from _sensor_or_null(CONF_POWER_RETURNED_SENSOR)
+    p_del_l1 = yield from _sensor_or_null(CONF_POWER_DELIVERED_L1_SENSOR)
+    p_ret_l1 = yield from _sensor_or_null(CONF_POWER_RETURNED_L1_SENSOR)
+    p_del_l2 = yield from _sensor_or_null(CONF_POWER_DELIVERED_L2_SENSOR)
+    p_ret_l2 = yield from _sensor_or_null(CONF_POWER_RETURNED_L2_SENSOR)
+    p_del_l3 = yield from _sensor_or_null(CONF_POWER_DELIVERED_L3_SENSOR)
+    p_ret_l3 = yield from _sensor_or_null(CONF_POWER_RETURNED_L3_SENSOR)
     e_del_t1 = yield from _sensor_or_null(CONF_ENERGY_DELIVERED_T1_SENSOR)
     e_del_t2 = yield from _sensor_or_null(CONF_ENERGY_DELIVERED_T2_SENSOR)
     e_ret_t1 = yield from _sensor_or_null(CONF_ENERGY_RETURNED_T1_SENSOR)
@@ -60,8 +90,18 @@ def to_code(config):
         config[CONF_ID],
         u1_v,
         i1_a,
+        u2_v,
+        i2_a,
+        u3_v,
+        i3_a,
         p_del,
         p_ret,
+        p_del_l1,
+        p_ret_l1,
+        p_del_l2,
+        p_ret_l2,
+        p_del_l3,
+        p_ret_l3,
         e_del_t1,
         e_del_t2,
         e_ret_t1,
